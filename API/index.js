@@ -183,6 +183,31 @@ app.get('/api/history/:customerId', async (req, res) => {
   }
 });
 
+app.get('/api/spin-summary', async (req, res) => {
+  try {
+    // Get prize distribution
+    const { data: prizeData, error: prizeError } = await supabase.rpc('prize_counts');
+    if (prizeError) {
+      console.error('Prize count error:', prizeError.message);
+      throw prizeError;
+    }
+
+    // Get spin totals by date (last 7 days)
+    const { data: dailyData, error: dailyError } = await supabase.rpc('spins_per_day_last_7');
+    if (dailyError) {
+      console.error('Daily RPC error:', dailyError.message);
+      throw dailyError;
+    }
+
+    res.status(200).json({
+      prizeCounts: prizeData,
+      spinsPerDay: dailyData
+    });
+  } catch (err) {
+    console.error('Summary endpoint error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch summary data' });
+  }
+});
 
 
 const PORT = process.env.PORT || 5000;
