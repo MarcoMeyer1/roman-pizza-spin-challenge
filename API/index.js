@@ -88,6 +88,77 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Create a new spin entry for the customer (no restrictions, easy to test with this way)
+app.post('/api/spin', async (req, res) => {
+  const { customerId } = req.body;
+
+  try {
+    if (!customerId) {
+      return res.status(400).json({ error: 'Customer ID is required' });
+    }
+
+    // Select a random prize from the available options
+    const prizes = ['10% Off', 'Free Pepsi', 'Free Pizza', 'Try Again'];
+    const prize = prizes[Math.floor(Math.random() * prizes.length)];
+
+    // Insert the spin into the database
+    const { data, error } = await supabase
+      .from('spins')
+      .insert([{ customer_id: customerId, prize }]);
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.status(200).json({ message: 'Spin successful', prize });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Check if the customer is allowed to spin (72-hour cooldown rule)
+app.get('/api/next-spin/:customerId', async (req, res) => {
+  const { customerId } = req.params;
+
+  try {
+    if (!customerId) {
+      return res.status(400).json({ error: 'Customer ID is required' });
+    }
+
+    // Get the most recent spin for the customer
+    const { data: lastSpin, error } = await supabase
+      .from('spins')
+      .select('spun_at')
+      .eq('customer_id', customerId)
+      .order('spun_at', { ascending: false })
+      .limit(1);
+
+    if (error) throw error;
+
+    // Not span yet — user can spin now
+    if (lastSpin.length === 0) {
+      return res.status(200).json({ nextSpinAt: null, canSpin: true });
+    }
+
+    const lastSpinTime = new Date(lastSpin[0].spun_at);
+    const now = new Date();
+    const hoursSinceLastSpin = (now - lastSpinTime) / (1000 * 60 * 60);
+
+    // More than 72 hours since last spin — eligible
+    if (hoursSinceLastSpin >= 72) {
+      return res.status(200).json({ nextSpinAt: null, canSpin: true });
+    }
+
+    // If user is not eligible yet — return when they can spin again
+    const nextSpinAt = new Date(lastSpinTime.getTime() + 72 * 60 * 60 * 1000);
+    res.status(200).json({
+      nextSpinAt: nextSpinAt.toISOString(),
+      canSpin: false
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Running on http://localhost:${PORT}`));
