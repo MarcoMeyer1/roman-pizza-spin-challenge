@@ -159,6 +159,31 @@ app.get('/api/next-spin/:customerId', async (req, res) => {
 });
 
 
+// Get spin history for a customer
+app.get('/api/history/:customerId', async (req, res) => {
+  const { customerId } = req.params;
+
+  try {
+    if (!customerId) {
+      return res.status(400).json({ error: 'Customer ID is required' });
+    }
+
+    // Retrieve all past spins for this customer
+    const { data, error } = await supabase
+      .from('spins')
+      .select('prize, spun_at')
+      .eq('customer_id', customerId)
+      .order('spun_at', { ascending: false });
+
+    if (error) return res.status(400).json({ error: error.message });
+
+    res.status(200).json({ history: data });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Running on http://localhost:${PORT}`));
