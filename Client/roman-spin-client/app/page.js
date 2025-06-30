@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header   from '../components/Header';
+import Header from '../components/Header';
 import SpinWheel from '../components/SpinWheel';
 import { useRouter } from 'next/navigation';
 
@@ -18,8 +18,6 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-100">
       <Header />
       <main className="p-6 text-center">
-    
-
         {!customer ? (
           <div className="text-red-600">
             <p>You must log in to spin.</p>

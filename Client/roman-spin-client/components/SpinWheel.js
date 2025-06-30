@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
 import PrizeModal from './PrizeModal.jsx';
@@ -9,15 +9,54 @@ import PrizeModal from './PrizeModal.jsx';
 const PRIZES = ['Free Pizza', 'Free Pepsi', '10% Off', 'Try Again'];
 const SEG = 360 / PRIZES.length; // Degrees per segment
 const FULL_SPINS = 3 * 360; // Ensures at least 3 full rotations per spin
+const ENABLE_COOLDOWN = false; // Toggle cooldown logic
 
 export default function SpinWheel({ customerId }) {
   const [deg, setDeg] = useState(0);          // Accumulated rotation
   const [busy, setBusy] = useState(false);    // Animation in progress
   const [win, setWin] = useState(null);       // Displayed result after spin
   const [showModal, setShowModal] = useState(false); // Modal display state
+  const [disableSpin, setDisableSpin] = useState(false); // Cooldown flag
+  const [timeLeft, setTimeLeft] = useState(null); // Countdown display
+
+  useEffect(() => {
+    if (!ENABLE_COOLDOWN || !customerId) return;
+
+    const checkCooldown = async () => {
+      try {
+        const { data } = await axios.get(`http://localhost:5000/api/next-spin/${customerId}`);
+        if (!data.canSpin && data.nextSpinAt) {
+          setDisableSpin(true);
+          const next = new Date(data.nextSpinAt).getTime();
+
+          const tick = () => {
+            const now = Date.now();
+            const diff = next - now;
+            if (diff <= 0) {
+              setDisableSpin(false);
+              setTimeLeft(null);
+              return;
+            }
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            setTimeLeft(`${h}h ${m}m ${s}s`);
+          };
+
+          tick();
+          const interval = setInterval(tick, 1000);
+          return () => clearInterval(interval);
+        }
+      } catch (err) {
+        console.error('Cooldown check failed', err.message);
+      }
+    };
+
+    checkCooldown();
+  }, [customerId]);
 
   const spin = async () => {
-    if (busy) return;
+    if (busy || disableSpin) return;
     setBusy(true);
     setWin(null);
     setShowModal(false);
@@ -79,13 +118,23 @@ export default function SpinWheel({ customerId }) {
       </div>
 
       {/* Spin button */}
-      <button
-        onClick={spin}
-        disabled={busy}
-        className="mt-6 bg-[#215197] text-white px-6 py-2 rounded hover:bg-blue-800 disabled:opacity-50"
-      >
-        {busy ? 'Spinning…' : 'Spin Now'}
-      </button>
+      {!disableSpin && (
+        <button
+          onClick={spin}
+          disabled={busy}
+          className="mt-6 bg-[#215197] text-white px-6 py-2 rounded hover:bg-blue-800 disabled:opacity-50"
+        >
+          {busy ? 'Spinning…' : 'Spin Now'}
+        </button>
+      )}
+
+      {/* Cooldown countdown */}
+      {disableSpin && timeLeft && (
+        <p className="mt-6 text-sm text-gray-700 text-center">
+          You can spin again in:<br />
+          <span className="text-lg font-semibold text-gray-800">{timeLeft}</span>
+        </p>
+      )}
 
       {/* Modal result */}
       {showModal && win && (
