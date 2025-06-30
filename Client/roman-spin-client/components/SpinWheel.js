@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import PrizeModal from './PrizeModal.jsx';
 
 // Constants
 const PRIZES = ['Free Pizza', 'Free Pepsi', '10% Off', 'Try Again'];
-const COLORS = ['#f44336', '#03a9f4', '#ffeb3b', '#4caf50']; // Slice colors
 const SEG = 360 / PRIZES.length; // Degrees per segment
 const FULL_SPINS = 3 * 360; // Ensures at least 3 full rotations per spin
 
@@ -14,11 +14,13 @@ export default function SpinWheel({ customerId }) {
   const [deg, setDeg] = useState(0);          // Accumulated rotation
   const [busy, setBusy] = useState(false);    // Animation in progress
   const [win, setWin] = useState(null);       // Displayed result after spin
+  const [showModal, setShowModal] = useState(false); // Modal display state
 
   const spin = async () => {
     if (busy) return;
     setBusy(true);
     setWin(null);
+    setShowModal(false);
 
     try {
       // Get prize from backend
@@ -42,10 +44,11 @@ export default function SpinWheel({ customerId }) {
       const finalDeg = deg + FULL_SPINS + delta;
       setDeg(finalDeg);
 
-      // Wait for animation to complete before showing result
+      // Show prize after rotation completes
       setTimeout(() => {
         setWin(prize);
         setBusy(false);
+        setShowModal(true);
       }, 3000);
     } catch (err) {
       alert('Spin failed: ' + err.message);
@@ -53,67 +56,26 @@ export default function SpinWheel({ customerId }) {
     }
   };
 
-  // Create arc path for each segment using SVG
-  const arcPath = (startDeg) => {
-    const endDeg = startDeg + SEG;
-    const largeArc = SEG > 180 ? 1 : 0;
-    const R = 150, cx = 150, cy = 150;
-    const sx = cx + R * Math.cos(startDeg * Math.PI / 180);
-    const sy = cy + R * Math.sin(startDeg * Math.PI / 180);
-    const ex = cx + R * Math.cos(endDeg * Math.PI / 180);
-    const ey = cy + R * Math.sin(endDeg * Math.PI / 180);
-    return `M${cx},${cy} L${sx},${sy} A${R},${R} 0 ${largeArc},1 ${ex},${ey} Z`;
-  };
-
-  // Ensure text labels remain upright regardless of rotation
-  const labelRotation = (angle, x, y) => {
-    const normalized = (angle + 360) % 360;
-    const rotate = normalized > 90 && normalized < 270 ? normalized + 180 : normalized;
-    return `rotate(${rotate} ${x} ${y})`;
-  };
-
   return (
-    <div className="flex flex-col items-center">
-      {/* Pointer at top */}
-      <div className="relative w-[320px] h-[320px]">
-        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10">
-          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[18px]
+    <div className="flex flex-col items-center px-4">
+      {/* Heading */}
+      <h2 className="text-2xl md:text-3xl font-bold text-[#215197] mt-4 mb-2">Spin & Win!</h2>
+
+      {/* Wheel container with animated rotation */}
+      <div className="relative w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] md:w-[480px] md:h-[480px]">
+        {/* Top pointer */}
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[18px] rotate-180
                           border-l-transparent border-r-transparent border-b-red-600" />
         </div>
 
-        {/* Wheel container with animated rotation */}
-        <motion.svg
-          width={320}
-          height={320}
-          viewBox="0 0 300 300"
+        <motion.img
+          src="/Pizza_Spin_Wheel.png"
+          alt="Spin the Wheel"
+          className="rounded-full w-full h-full object-contain"
           animate={{ rotate: deg }}
           transition={{ duration: 3, ease: 'easeOut' }}
-          className="rounded-full"
-        >
-          {PRIZES.map((label, i) => {
-            const start = -90 + i * SEG;
-            const center = start + SEG / 2;
-            const textX = 150 + 95 * Math.cos(center * Math.PI / 180);
-            const textY = 150 + 95 * Math.sin(center * Math.PI / 180);
-
-            return (
-              <g key={label}>
-                <path d={arcPath(start)} fill={COLORS[i]} stroke="#fff" strokeWidth="2" />
-                <text
-                  x={textX}
-                  y={textY}
-                  fontSize="14"
-                  fontWeight="bold"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  transform={labelRotation(center, textX, textY)}
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })}
-        </motion.svg>
+        />
       </div>
 
       {/* Spin button */}
@@ -125,11 +87,9 @@ export default function SpinWheel({ customerId }) {
         {busy ? 'Spinning…' : 'Spin Now'}
       </button>
 
-      {/* Prize result */}
-      {win && (
-        <p className="mt-6 text-lg font-bold text-green-700">
-          You won: <span className="text-black">{win}</span>!
-        </p>
+      {/* Modal result */}
+      {showModal && win && (
+        <PrizeModal prize={win} onClose={() => setShowModal(false)} />
       )}
     </div>
   );

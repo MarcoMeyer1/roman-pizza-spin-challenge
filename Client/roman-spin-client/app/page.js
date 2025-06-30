@@ -18,7 +18,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gray-100">
       <Header />
       <main className="p-6 text-center">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Spin & Win!</h2>
+    
 
         {!customer ? (
           <div className="text-red-600">
