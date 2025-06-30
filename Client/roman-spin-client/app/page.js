@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Header from '../components/Header';
+import Header   from '../components/Header';
 import SpinWheel from '../components/SpinWheel';
 import { useRouter } from 'next/navigation';
 
@@ -10,11 +10,8 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in
     const stored = localStorage.getItem('customer');
-    if (stored) {
-      setCustomer(JSON.parse(stored));
-    }
+    if (stored) setCustomer(JSON.parse(stored));
   }, []);
 
   return (
@@ -25,7 +22,7 @@ export default function HomePage() {
 
         {!customer ? (
           <div className="text-red-600">
-            <p>It seems you are not logged in.</p>
+            <p>You must log in to spin.</p>
             <button
               onClick={() => router.push('/login')}
               className="mt-4 bg-[#215197] text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -34,9 +31,7 @@ export default function HomePage() {
             </button>
           </div>
         ) : (
-          <div>
-            <SpinWheel customerId={customer.id} />
-          </div>
+          <SpinWheel customerId={customer.id} />
         )}
       </main>
     </div>

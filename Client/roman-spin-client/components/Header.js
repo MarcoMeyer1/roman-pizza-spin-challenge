@@ -8,7 +8,7 @@ export default function Header() {
       <h1 className="font-bold text-lg">🍕 Roman&apos;s Pizza Spin</h1>
       <nav className="flex gap-4">
         <Link href="/">Spin</Link>
-        <Link href="/spin/summary">Summary</Link>
+        <Link href="/summary">Summary</Link>
         <Link href="/login">Login</Link>
         <Link href="/register">Register</Link>
       </nav>
